@@ -1,6 +1,6 @@
 import { Downloader } from "./downloader.js";
 
-const url = "http://localhost:8000/1.mp4";
+const url = "http://127.0.0.1:5500/1.mp4";
 
 function loadMediaData(ctx) {
   const { dw, mp4file } = ctx.shared;
