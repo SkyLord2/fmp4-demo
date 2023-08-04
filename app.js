@@ -1,10 +1,12 @@
 import { Downloader } from "./downloader.js";
 
-const url = "http://127.0.0.1:5500/1.mp4";
-
+// const url = "http://127.0.0.1:5500/TestFile.MP4";
+const url = "http://127.0.0.1:5500/EncryptedTestFile.MP4";
+const filePrefix64 = "AAAAFGZ0eXAzZ3A0AAACADNncDQAAQAQc2tpcOBG2AHgI8oBAAAPm//Y/9sAxQACAgICAgICAgICAwICAgMEAwICAwQFAwMEAwMFBQUFBQUFBQYGBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHAQIDAwUE";
 function loadMediaData(ctx) {
   const { dw, mp4file } = ctx.shared;
   dw.chunkStart = mp4file.seek(0, true).offset;
+  dw.chunkStart > 128 && (dw.chunkStart += 11);
   mp4file.start();
   dw.resume();
 }
@@ -123,11 +125,26 @@ function handleSourceOpen(evt, vElem) {
     url,
     chunkSize: 300 * 1024,
     onChunk({ bytes, isEof }) {
+      if (bytes.fileStart === 0) {
+        const filePrefix = base64js.toByteArray(filePrefix64);
+        const left       = new Uint8Array(bytes, 128);
+        const newBuffer  = new ArrayBuffer(filePrefix.byteLength + left.byteLength);
+        const newArray   = new Uint8Array(newBuffer, 0);
+        newArray.set(filePrefix, 0);
+        newArray.set(left, filePrefix.byteLength);
+        bytes = newBuffer;
+        bytes.fileStart = 0;  
+      } else {
+        bytes.fileStart > 128 && (bytes.fileStart -= 11);
+      }
+      console.log('position file start:', bytes.fileStart);
       const next = mp4file.appendBuffer(bytes, isEof);
       if (isEof) {
         mp4file.flush();
       } else {
         dw.chunkStart = next;
+        dw.chunkStart > 128 && (dw.chunkStart += 11);
+        console.log('position next offset:', dw.chunkStart);
       }
     }
   }));
